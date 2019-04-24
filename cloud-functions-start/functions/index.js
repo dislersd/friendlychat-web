@@ -51,3 +51,25 @@ exports.sendNotifications = functions.firestore
       console.log("Notifications have been sent and tokens cleaned up");
     }
   });
+
+function cleanupTokens(response, tokens) {
+  const tokensDelete = [];
+  response.results.forEach((result, index) => {
+    const error = result.error;
+    if (error) {
+      console.error("Failure sending notification to", tokens[index], error);
+      if (
+        error.code === "messaging/invalid-registration-token" ||
+        error.code === "messaging/registration-token-not-registered"
+      ) {
+        const deleteTask = admin
+          .firestore()
+          .collection("messages")
+          .doc(tokens[index])
+          .delete();
+        tokensDelete.push(deleteTask);
+      }
+    }
+  });
+  return Promise.all(tokensDelete);
+}
